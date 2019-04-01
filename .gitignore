@@ -1,0 +1,8 @@
+data/docker_volumes/es/
+data/raw/price_eod_bars/*.json
+scripts/download_eod_bars_allraw.sh
+target/
+.vscode/
+.classpath
+.project
+.settings/

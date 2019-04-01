@@ -1,0 +1,18 @@
+version: "3"
+services:
+  es:
+    image: docker.elastic.co/elasticsearch/elasticsearch:6.7.0
+    ports:
+      - 19200:9200
+    networks:
+      trading-net:
+        ipv4_address: 172.22.0.3
+    volumes:
+      - ./data/docker_volumes/es/:/usr/share/elasticsearch/data
+
+networks:
+  trading-net:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.22.0.0/16
