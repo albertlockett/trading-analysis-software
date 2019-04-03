@@ -1,0 +1,22 @@
+{
+  "mappings": {
+    "bar":{
+      "properties": {
+        "symbol": { "type": "text" },
+        "date": { "type": "date" },
+        "open": { "type": "double" },
+        "high": { "type": "double" },
+        "low": { "type": "double" },
+        "close": { "type": "double" },
+        "volume": { "type": "double" },
+        "dividend": { "type": "double" },
+        "split": { "type": "double" },
+        "adj_open": { "type": "double" },
+        "adj_high": { "type": "double" },
+        "adj_low": { "type": "double" },
+        "adj_close": { "type": "double" },
+        "adj_volume": { "type": "double" }
+      }
+    }
+  }
+}

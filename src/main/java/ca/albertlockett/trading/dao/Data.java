@@ -9,11 +9,19 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoField;
 import java.util.Map;
+import java.util.stream.Stream;
 
+import org.elasticsearch.action.search.ClearScrollRequest;
+import org.elasticsearch.action.search.ClearScrollResponse;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.search.SearchScrollRequest;
+import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.search.Scroll;
+import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.FieldSortBuilder;
 import org.elasticsearch.search.sort.SortOrder;
@@ -37,35 +45,55 @@ public class Data {
       .build();
 
     RestHighLevelClient client = ClientFactory.getInstance().getClient();
+    Scroll scroll = new Scroll(TimeValue.timeValueMinutes(1L));
     SearchRequest searchRequest = new SearchRequest("bars");
+    searchRequest.scroll(scroll);
+
     SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
     searchSourceBuilder.query(
       QueryBuilders.boolQuery()
         .filter(QueryBuilders.rangeQuery("date").gt(from).lt(to))
         .must(QueryBuilders.matchQuery("symbol", symbol)));
     searchSourceBuilder.sort(new FieldSortBuilder("date").order(SortOrder.ASC));  
-
     searchRequest.source(searchSourceBuilder);
 
     try {
       SearchResponse response = client.search(searchRequest);
+      SearchHit[] searchHits = response.getHits().getHits();
+      String scrollId = response.getScrollId();
 
-      response.getHits().forEach(hit -> {
-        Map<String, Object> map = hit.getSourceAsMap();
-
-        ZonedDateTime date = LocalDateTime.parse(map.get("date").toString(), formatter).atZone(ZoneId.of("US/Eastern"));
-        Double open = Double.parseDouble(map.get("open").toString());
-        Double close = Double.parseDouble(map.get("open").toString());
-        Double high = Double.parseDouble(map.get("high").toString());
-        Double low = Double.parseDouble(map.get("low").toString());
-        Double volume = Double.parseDouble(map.get("volume").toString());
-        series.addBar(date, open, high, low, close, volume);
-      });
+      while (searchHits != null && searchHits.length > 0) {
+        Stream.of(searchHits).forEach(hit -> this.addBar(series, hit));
+        SearchScrollRequest scrollRequest = new SearchScrollRequest(scrollId);
+        scrollRequest.scroll(scroll);
+        response = client.scroll(scrollRequest, RequestOptions.DEFAULT);
+        scrollId = response.getScrollId();
+        searchHits = response.getHits().getHits();
+      }
+      
+      ClearScrollRequest clearScrollRequest = new ClearScrollRequest();
+      clearScrollRequest.addScrollId(scrollId);
+      ClearScrollResponse clearScrollResponse = client.clearScroll(clearScrollRequest, RequestOptions.DEFAULT);
+      boolean succeeded = clearScrollResponse.isSucceeded();
+      if (!succeeded) {
+        System.err.println("Succeded was false");
+      }
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
 
     return series;
+  }
+
+  public void addBar(TimeSeries series, SearchHit hit) {
+    Map<String, Object> map = hit.getSourceAsMap();
+    ZonedDateTime date = LocalDateTime.parse(map.get("date").toString(), formatter).atZone(ZoneId.of("US/Eastern"));
+    Double open = Double.parseDouble(map.get("open").toString());
+    Double close = Double.parseDouble(map.get("open").toString());
+    Double high = Double.parseDouble(map.get("high").toString());
+    Double low = Double.parseDouble(map.get("low").toString());
+    Double volume = Double.parseDouble(map.get("volume").toString());
+    series.addBar(date, open, high, low, close, volume);
   }
 
 }
