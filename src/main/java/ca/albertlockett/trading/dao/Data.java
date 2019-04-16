@@ -89,7 +89,7 @@ public class Data {
     Map<String, Object> map = hit.getSourceAsMap();
     ZonedDateTime date = LocalDateTime.parse(map.get("date").toString(), formatter).atZone(ZoneId.of("US/Eastern"));
     Double open = Double.parseDouble(map.get("open").toString());
-    Double close = Double.parseDouble(map.get("open").toString());
+    Double close = Double.parseDouble(map.get("close").toString());
     Double high = Double.parseDouble(map.get("high").toString());
     Double low = Double.parseDouble(map.get("low").toString());
     Double volume = Double.parseDouble(map.get("volume").toString());
