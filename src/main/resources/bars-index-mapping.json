@@ -2,7 +2,7 @@
   "mappings": {
     "bar":{
       "properties": {
-        "symbol": { "type": "text" },
+        "symbol": { "type": "keyword" },
         "date": { "type": "date" },
         "open": { "type": "double" },
         "high": { "type": "double" },

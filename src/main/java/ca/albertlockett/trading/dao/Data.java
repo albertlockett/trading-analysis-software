@@ -8,8 +8,12 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoField;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import org.elasticsearch.action.search.ClearScrollRequest;
 import org.elasticsearch.action.search.ClearScrollResponse;
@@ -22,6 +26,10 @@ import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.Scroll;
 import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.aggregations.AggregationBuilder;
+import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.BucketOrder;
+import org.elasticsearch.search.aggregations.bucket.terms.ParsedStringTerms;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.FieldSortBuilder;
 import org.elasticsearch.search.sort.SortOrder;
@@ -83,6 +91,27 @@ public class Data {
     }
 
     return series;
+  }
+
+  public List<String> fectchAvailableSymobls() {
+    RestHighLevelClient client = ClientFactory.getInstance().getClient();
+
+    try {
+      SearchSourceBuilder source = new SearchSourceBuilder()
+        .query(QueryBuilders.matchAllQuery())
+        .aggregation(
+          AggregationBuilders
+              .terms("symbols")
+              .field("symbol")
+              .order(BucketOrder.key(true))
+              .size(9999));
+      SearchRequest request = new SearchRequest("bars").source(source);
+      SearchResponse response = client.search(request);
+      ParsedStringTerms terms = response.getAggregations().get("symbols");
+      return terms.getBuckets().stream().map(bucket -> bucket.getKeyAsString()).collect(Collectors.toList());
+    } catch(IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   public void addBar(TimeSeries series, SearchHit hit) {
